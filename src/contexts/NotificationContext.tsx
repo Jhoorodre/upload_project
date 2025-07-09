@@ -10,6 +10,10 @@ interface NotificationProviderProps {
 export function NotificationProvider({ children }: NotificationProviderProps) {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
+  const removeNotification = useCallback((id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  }, []);
+
   const addNotification = useCallback((notification: Omit<AppNotification, 'id'>) => {
     const id = Date.now().toString();
     const newNotification: AppNotification = {
@@ -25,10 +29,6 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
       }, notification.duration);
     }
   }, [removeNotification]);
-
-  const removeNotification = useCallback((id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  }, []);
 
   const clearNotifications = useCallback(() => {
     setNotifications([]);
