@@ -28,28 +28,24 @@ export function MangaUploader() {
     group: ''
   });
 
-  if (!configContext || !uploadContext || !notificationContext) {
-    return <div>Erro ao carregar contextos</div>;
-  }
-
-  const { config, updateConfig } = configContext;
-  const { selectedFiles, uploadProgress, isUploading, addFiles, removeFile, clearFiles, startUpload } = uploadContext;
-  const { notifications, removeNotification } = notificationContext;
+  const { notifications, removeNotification } = notificationContext || { notifications: [], removeNotification: () => {} };
 
   const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!uploadContext) return;
     const files = event.target.files;
     if (files) {
       try {
-        await addFiles(files);
+        await uploadContext.addFiles(files);
         showSuccess(`${files.length} arquivo(s) adicionado(s) com sucesso`);
       } catch (error) {
         showError(error instanceof Error ? error.message : 'Erro ao adicionar arquivos');
       }
     }
-  }, [addFiles, showSuccess, showError]);
+  }, [uploadContext, showSuccess, showError]);
 
   const handleUpload = useCallback(async () => {
-    const validation = validateConfig(config);
+    if (!configContext || !uploadContext) return;
+    const validation = validateConfig(configContext.config);
     if (!validation.isValid) {
       showError(`Configuração inválida: ${validation.errors.join(', ')}`);
       return;
@@ -61,12 +57,19 @@ export function MangaUploader() {
     }
 
     try {
-      await startUpload(mangaData, chapterData);
+      await uploadContext.startUpload(mangaData, chapterData);
       showSuccess('Upload concluído com sucesso!');
     } catch (error) {
       showError(error instanceof Error ? error.message : 'Erro durante o upload');
     }
-  }, [config, mangaData, chapterData, startUpload, showSuccess, showError]);
+  }, [configContext, uploadContext, mangaData, chapterData, showSuccess, showError]);
+
+  if (!configContext || !uploadContext || !notificationContext) {
+    return <div>Erro ao carregar contextos</div>;
+  }
+
+  const { config, updateConfig } = configContext;
+  const { selectedFiles, uploadProgress, isUploading, addFiles, removeFile, clearFiles, startUpload } = uploadContext;
 
   const renderUploadTab = () => (
     <div className="space-y-6">
