@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import { UseUploadResult, FilePreview, MangaData, ChapterData, Config, UploadResult, UploadProgress } from '../types';
 import { UploadService, GitHubService, CompressionService } from '../services';
 
@@ -7,9 +7,9 @@ export function useUpload(): UseUploadResult {
   const [progress, setProgress] = useState<UploadProgress[]>([]);
   const cancelRef = useRef(false);
   
-  const uploadService = new UploadService();
-  const githubService = new GitHubService();
-  const compressionService = new CompressionService();
+  const uploadService = useMemo(() => new UploadService(), []);
+  const githubService = useMemo(() => new GitHubService(), []);
+  const compressionService = useMemo(() => new CompressionService(), []);
 
   const cancel = useCallback(() => {
     cancelRef.current = true;

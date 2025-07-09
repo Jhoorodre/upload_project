@@ -69,7 +69,7 @@ export function MangaUploader() {
   }
 
   const { config, updateConfig } = configContext;
-  const { selectedFiles, uploadProgress, isUploading, addFiles, removeFile, clearFiles, startUpload } = uploadContext;
+  const { selectedFiles, uploadProgress, isUploading, removeFile, clearFiles } = uploadContext;
 
   const renderUploadTab = () => (
     <div className="space-y-6">

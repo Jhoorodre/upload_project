@@ -105,7 +105,7 @@ export class UploadService {
       }
     }
     
-    throw lastError!;
+    throw new Error(lastError!.message);
   }
 
   getAvailableHosts(config: Config): string[] {

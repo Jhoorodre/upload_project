@@ -1,5 +1,5 @@
-import React, { createContext, useState, useCallback, ReactNode, useContext } from 'react';
-import { UploadContextType, FilePreview, MangaData, ChapterData, UploadProgress, UploadResult } from '../types';
+import React, { createContext, useState, useCallback, ReactNode, useContext, useMemo } from 'react';
+import { UploadContextType, FilePreview, MangaData, ChapterData, UploadResult } from '../types';
 import { ConfigContext } from './ConfigContext';
 import { useUpload } from '../hooks/useUpload';
 import { validateFiles, generateFileId, createFilePreview } from '../utils';
@@ -15,8 +15,8 @@ export function UploadProvider({ children }: UploadProviderProps) {
   const [selectedFiles, setSelectedFiles] = useState<FilePreview[]>([]);
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
   const configContext = useContext(ConfigContext);
-  const { upload, isLoading, progress, cancel } = useUpload();
-  const compressionService = new CompressionService();
+  const { upload, isLoading, progress } = useUpload();
+  const compressionService = useMemo(() => new CompressionService(), []);
 
   if (!configContext) {
     throw new Error('UploadProvider must be used within a ConfigProvider');
