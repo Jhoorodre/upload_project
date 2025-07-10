@@ -1,5 +1,5 @@
 import { Config } from '../types';
-import { ProxyService } from './ProxyService';
+import { CorsProxyService } from './CorsProxyService';
 
 export class UploadService {
   private async uploadToCatbox(file: File, userhash: string, signal?: AbortSignal): Promise<string> {
@@ -9,11 +9,23 @@ export class UploadService {
     formData.append('reqtype', 'fileupload');
 
     try {
-      const response = await fetch('https://catbox.moe/user/api.php', {
-        method: 'POST',
-        body: formData,
-        signal
-      });
+      // Tentar primeiro com fetch direto
+      let response: Response;
+      try {
+        response = await fetch('https://catbox.moe/user/api.php', {
+          method: 'POST',
+          body: formData,
+          signal
+        });
+      } catch (corsError) {
+        // Se falhar por CORS, usar proxy especializado
+        if (corsError instanceof TypeError && corsError.message.includes('Failed to fetch')) {
+          console.log('🔄 CORS detectado, usando proxy especializado para upload...');
+          response = await CorsProxyService.uploadWithCorsProxy('https://catbox.moe/user/api.php', formData, signal);
+        } else {
+          throw corsError;
+        }
+      }
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -26,7 +38,7 @@ export class UploadService {
       throw new Error(`Catbox upload failed: ${result}`);
     } catch (error: any) {
       if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-        throw new Error('⚠️ ERRO CORS: Catbox bloqueado! Use uma extensão CORS (CORS Unblock) ou configure ImgBB/Imgur como alternativa.');
+        throw new Error('⚠️ ERRO CORS: Proxy também falhou. Verifique sua conexão com a internet.');
       }
       throw error;
     }
@@ -153,11 +165,24 @@ export class UploadService {
         switch (host) {
           case 'catbox':
             try {
+              // Tentar primeiro conexão direta
               const catboxResponse = await fetch('https://catbox.moe', { method: 'HEAD' });
               results[host] = catboxResponse.ok;
             } catch (error) {
               if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-                results[host] = '❌ CORS bloqueado - Use ImgBB/Imgur';
+                try {
+                  // Testar proxies disponíveis
+                  const proxyResults = await CorsProxyService.testProxy('https://catbox.moe');
+                  const workingProxies = proxyResults.filter(p => p.working);
+                  
+                  if (workingProxies.length > 0) {
+                    results[host] = `✅ Funcionando via proxy (${workingProxies.length} disponíveis)`;
+                  } else {
+                    results[host] = '❌ CORS bloqueado - Nenhum proxy funcionando';
+                  }
+                } catch (proxyError) {
+                  results[host] = '❌ CORS bloqueado - Erro ao testar proxies';
+                }
               } else {
                 results[host] = false;
               }

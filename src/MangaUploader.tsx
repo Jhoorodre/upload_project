@@ -966,11 +966,10 @@ export function MangaUploader() {
 
       <Card title="Image Hosts">
         <div className="space-y-4">
-          <div className="mb-4 p-3 bg-orange-50 rounded-lg border border-orange-200">
-            <p className="text-sm text-orange-800">
-              <strong>⚠️ Para usar Catbox:</strong> Instale uma extensão CORS no seu navegador.<br/>
-              <strong>Recomendado:</strong> "CORS Unblock" (Chrome) ou "CORS Everywhere" (Firefox/Chrome)<br/>
-              <strong>Alternativas:</strong> ImgBB e Imgur funcionam sem extensões.
+          <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
+            <p className="text-sm text-green-800">
+              <strong>✅ Catbox:</strong> Funciona automaticamente com proxy integrado.<br/>
+              <strong>Alternativas:</strong> ImgBB e Imgur também funcionam perfeitamente.
             </p>
           </div>
           
@@ -982,7 +981,7 @@ export function MangaUploader() {
               className="form-checkbox"
             />
             <span className="font-medium">Catbox.moe</span>
-            <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Requer extensão CORS</span>
+            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Proxy automático</span>
           </div>
           {config.hosts.catbox.enabled && (
             <Input
