@@ -7,7 +7,6 @@ const defaultConfig: Config = {
     pat: '',
     owner: '',
     repo: '',
-    filename: 'manga-index.json'
   },
   hosts: {
     catbox: {
@@ -44,11 +43,23 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
     const newConfig = { ...config };
     let current: any = newConfig;
     
+    // Validate path exists
     for (let i = 0; i < pathArray.length - 1; i++) {
+      if (!current || typeof current !== 'object' || !(pathArray[i] in current)) {
+        console.error(`Invalid config path: ${path}`);
+        return;
+      }
       current = current[pathArray[i]];
     }
     
-    current[pathArray[pathArray.length - 1]] = value;
+    // Validate final key exists
+    const finalKey = pathArray[pathArray.length - 1];
+    if (!current || typeof current !== 'object') {
+      console.error(`Invalid config path: ${path}`);
+      return;
+    }
+    
+    current[finalKey] = value;
     setConfig(newConfig);
   };
 

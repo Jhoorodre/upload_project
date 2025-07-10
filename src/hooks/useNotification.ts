@@ -2,6 +2,12 @@ import { useContext } from 'react';
 import { NotificationContext } from '../contexts/NotificationContext';
 import { UseNotificationResult } from '../types';
 
+// Notification durations
+const NOTIFICATION_DURATION_SUCCESS = 5000;
+const NOTIFICATION_DURATION_ERROR = 8000;
+const NOTIFICATION_DURATION_WARNING = 6000;
+const NOTIFICATION_DURATION_INFO = 4000;
+
 export function useNotification(): UseNotificationResult {
   const context = useContext(NotificationContext);
   
@@ -16,7 +22,7 @@ export function useNotification(): UseNotificationResult {
       type: 'success',
       title,
       message,
-      duration: 5000
+      duration: NOTIFICATION_DURATION_SUCCESS
     });
   };
   
@@ -25,7 +31,7 @@ export function useNotification(): UseNotificationResult {
       type: 'error',
       title,
       message,
-      duration: 8000
+      duration: NOTIFICATION_DURATION_ERROR
     });
   };
   
@@ -34,7 +40,7 @@ export function useNotification(): UseNotificationResult {
       type: 'warning',
       title,
       message,
-      duration: 6000
+      duration: NOTIFICATION_DURATION_WARNING
     });
   };
   
@@ -43,7 +49,7 @@ export function useNotification(): UseNotificationResult {
       type: 'info',
       title,
       message,
-      duration: 4000
+      duration: NOTIFICATION_DURATION_INFO
     });
   };
   

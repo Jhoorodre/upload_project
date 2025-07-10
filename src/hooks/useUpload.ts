@@ -5,14 +5,17 @@ import { UploadService, GitHubService, CompressionService } from '../services';
 export function useUpload(): UseUploadResult {
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState<UploadProgress[]>([]);
-  const cancelRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
   
   const uploadService = useMemo(() => new UploadService(), []);
   const githubService = useMemo(() => new GitHubService(), []);
   const compressionService = useMemo(() => new CompressionService(), []);
 
   const cancel = useCallback(() => {
-    cancelRef.current = true;
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
   }, []);
 
   const updateProgress = useCallback((fileName: string, updates: Partial<UploadProgress>) => {
@@ -28,7 +31,7 @@ export function useUpload(): UseUploadResult {
     config: Config
   ): Promise<UploadResult> => {
     setIsLoading(true);
-    cancelRef.current = false;
+    abortControllerRef.current = new AbortController();
     
     const startTime = Date.now();
     const initialProgress: UploadProgress[] = files.map(file => ({
@@ -54,7 +57,7 @@ export function useUpload(): UseUploadResult {
     let totalSize = 0;
     
     for (let i = 0; i < files.length; i++) {
-      if (cancelRef.current) break;
+      if (abortControllerRef.current?.signal.aborted) break;
       
       const filePreview = files[i];
       const fileName = filePreview.file.name;
@@ -76,7 +79,7 @@ export function useUpload(): UseUploadResult {
         
         updateProgress(fileName, { progress: 25 });
         
-        const url = await uploadService.uploadWithRetry(fileToUpload, hostName, config, 3);
+        const url = await uploadService.uploadWithRetry(fileToUpload, hostName, config, 3, abortControllerRef.current?.signal);
         
         updateProgress(fileName, { 
           status: 'success', 
@@ -100,12 +103,11 @@ export function useUpload(): UseUploadResult {
     
     let indexUrl: string | undefined;
     
-    if (urls.length > 0 && !cancelRef.current) {
-      try {
-        indexUrl = await githubService.updateIndex(config.github, mangaData, chapterData, urls);
-      } catch (error) {
-        console.error('Erro ao atualizar índice:', error);
-      }
+    // Nota: Sistema agora gerencia JSONs individuais através da interface principal
+    // A atualização do JSON é feita diretamente no MangaUploader.tsx
+    if (urls.length > 0 && !abortControllerRef.current?.signal.aborted) {
+      // TODO: Implementar atualização do JSON individual se necessário
+      indexUrl = undefined; // Por enquanto não retorna URL de índice
     }
     
     const duration = Date.now() - startTime;

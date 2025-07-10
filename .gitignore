@@ -30,3 +30,8 @@ yarn-error.log*
 # OS generated files
 Thumbs.db
 .DS_Store
+
+# DOCs
+BUGS_ANALYSIS.md
+CORS-SETUP.md
+resume.md

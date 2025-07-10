@@ -37,7 +37,6 @@ export interface Config {
     pat: string;
     owner: string;
     repo: string;
-    filename: string;
   };
   hosts: HostConfig;
   strategies: UploadStrategy;
@@ -123,7 +122,7 @@ export interface UploadContextType {
   removeFile: (id: string) => void;
   clearFiles: () => void;
   startUpload: (mangaData: MangaData, chapterData: ChapterData) => Promise<void>;
-  retryUpload: (fileId: string) => Promise<void>;
+  retryUpload: (fileId: string) => Promise<string>;
 }
 
 export interface NotificationContextType {
@@ -203,9 +202,11 @@ export interface UploadService {
 }
 
 export interface GitHubService {
-  getCurrentIndex: (config: Config['github']) => Promise<{ data: any; sha: string | null }>;
-  updateIndex: (config: Config['github'], mangaData: MangaData, chapterData: ChapterData, urls: string[]) => Promise<string>;
   testConnection: (config: Config['github']) => Promise<boolean>;
+  getJsonFile: (owner: string, repo: string, path: string, pat: string) => Promise<{ content: any; sha: string | null }>;
+  saveJsonFile: (owner: string, repo: string, path: string, content: any, pat: string, sha?: string) => Promise<string>;
+  listRepositoryContents: (owner: string, repo: string, path: string, pat: string) => Promise<any[]>;
+  deleteJsonFile: (owner: string, repo: string, path: string, pat: string, sha: string) => Promise<void>;
 }
 
 export interface CompressionService {

@@ -1,13 +1,18 @@
 import { ValidationResult, FileValidationOptions } from '../types';
 
+// Constants
+const DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const DEFAULT_MAX_FILES = 100;
+const DEFAULT_ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
 export const validateFiles = (
   files: FileList,
   options: FileValidationOptions = {}
 ): ValidationResult => {
   const {
-    maxSize = 10 * 1024 * 1024,
-    allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-    maxFiles = 100
+    maxSize = DEFAULT_MAX_FILE_SIZE,
+    allowedTypes = DEFAULT_ALLOWED_IMAGE_TYPES,
+    maxFiles = DEFAULT_MAX_FILES
   } = options;
 
   const errors: string[] = [];
@@ -48,9 +53,6 @@ export const validateConfig = (config: any): ValidationResult => {
     errors.push('GitHub Repository é obrigatório');
   }
 
-  if (!config.github?.filename) {
-    errors.push('GitHub Filename é obrigatório');
-  }
 
   const hasAnyHost = config.hosts?.catbox?.enabled || config.hosts?.imgbb || config.hosts?.imgur;
   if (!hasAnyHost) {
@@ -68,16 +70,17 @@ export const validateConfig = (config: any): ValidationResult => {
 };
 
 export const formatFileSize = (bytes: number): string => {
-  const units = ['B', 'KB', 'MB', 'GB'];
+  const FILE_SIZE_UNITS = ['B', 'KB', 'MB', 'GB'];
+const BYTES_PER_UNIT = 1024;
   let size = bytes;
   let unitIndex = 0;
 
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
+  while (size >= BYTES_PER_UNIT && unitIndex < FILE_SIZE_UNITS.length - 1) {
+    size /= BYTES_PER_UNIT;
     unitIndex++;
   }
 
-  return `${size.toFixed(1)} ${units[unitIndex]}`;
+  return `${size.toFixed(1)} ${FILE_SIZE_UNITS[unitIndex]}`;
 };
 
 export const generateFileId = (): string => {
@@ -91,8 +94,29 @@ export const isImageFile = (file: File): boolean => {
 export const createFilePreview = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = (e) => resolve(e.target?.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
+    
+    const cleanup = () => {
+      reader.abort();
+    };
+    
+    reader.onload = (e) => {
+      resolve(e.target?.result as string);
+    };
+    
+    reader.onerror = (error) => {
+      cleanup();
+      reject(error);
+    };
+    
+    reader.onabort = () => {
+      reject(new Error('File reading was aborted'));
+    };
+    
+    try {
+      reader.readAsDataURL(file);
+    } catch (error) {
+      cleanup();
+      reject(error);
+    }
   });
 };

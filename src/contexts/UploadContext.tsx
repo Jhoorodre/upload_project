@@ -1,9 +1,9 @@
-import React, { createContext, useState, useCallback, ReactNode, useContext, useMemo } from 'react';
+import React, { createContext, useState, useCallback, ReactNode, useContext, useMemo, useEffect } from 'react';
 import { UploadContextType, FilePreview, MangaData, ChapterData, UploadResult } from '../types';
 import { ConfigContext } from './ConfigContext';
 import { useUpload } from '../hooks/useUpload';
 import { validateFiles, generateFileId, createFilePreview } from '../utils';
-import { CompressionService } from '../services';
+import { CompressionService, UploadService } from '../services';
 
 export const UploadContext = createContext<UploadContextType | undefined>(undefined);
 
@@ -17,6 +17,17 @@ export function UploadProvider({ children }: UploadProviderProps) {
   const configContext = useContext(ConfigContext);
   const { upload, isLoading, progress } = useUpload();
   const compressionService = useMemo(() => new CompressionService(), []);
+  
+  // Cleanup previews on unmount and when files change
+  useEffect(() => {
+    return () => {
+      selectedFiles.forEach(file => {
+        if (file.preview && file.preview.startsWith('blob:')) {
+          URL.revokeObjectURL(file.preview);
+        }
+      });
+    };
+  }, [selectedFiles]);
 
   if (!configContext) {
     throw new Error('UploadProvider must be used within a ConfigProvider');
@@ -85,10 +96,33 @@ export function UploadProvider({ children }: UploadProviderProps) {
   }, [selectedFiles, upload, config]);
 
   const retryUpload = useCallback(async (fileId: string) => {
-    // Implementation for retrying specific file upload
-    // This would require more complex state management
-    console.log('Retry upload for file:', fileId);
-  }, []);
+    const fileToRetry = selectedFiles.find(f => f.id === fileId);
+    if (!fileToRetry) {
+      throw new Error('Arquivo não encontrado para retry');
+    }
+
+    try {
+      const availableHosts = new UploadService().getAvailableHosts(config);
+      if (availableHosts.length === 0) {
+        throw new Error('Nenhum host disponível');
+      }
+
+      let fileToUpload = fileToRetry.file;
+      if (config.compression.enabled) {
+        fileToUpload = await compressionService.compressImage(fileToUpload, config.compression);
+      }
+
+      const hostName = config.strategies.preferred_host || availableHosts[0];
+      const url = await new UploadService().uploadWithRetry(fileToUpload, hostName, config, 3);
+      
+      // Update progress state if needed
+      return url;
+    } catch (error) {
+      // TODO: Replace with proper error logging
+      // console.error('Retry failed:', error);
+      throw error;
+    }
+  }, [selectedFiles, config, compressionService]);
 
   const contextValue: UploadContextType = {
     selectedFiles,

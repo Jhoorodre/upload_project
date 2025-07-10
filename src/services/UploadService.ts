@@ -1,7 +1,7 @@
 import { Config } from '../types';
 
 export class UploadService {
-  private async uploadToCatbox(file: File, userhash: string): Promise<string> {
+  private async uploadToCatbox(file: File, userhash: string, signal?: AbortSignal): Promise<string> {
     const formData = new FormData();
     formData.append('fileToUpload', file);
     formData.append('userhash', userhash);
@@ -10,6 +10,7 @@ export class UploadService {
     const response = await fetch('https://catbox.moe/user/api.php', {
       method: 'POST',
       body: formData,
+      signal
     });
 
     if (!response.ok) {
@@ -23,13 +24,15 @@ export class UploadService {
     throw new Error(`Catbox upload failed: ${result}`);
   }
 
-  private async uploadToImgBB(file: File, apiKey: string): Promise<string> {
+  private async uploadToImgBB(file: File, apiKey: string, signal?: AbortSignal): Promise<string> {
     const formData = new FormData();
     formData.append('image', file);
 
     const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
       method: 'POST',
       body: formData,
+      mode: 'cors',
+      signal
     });
 
     const result = await response.json();
@@ -39,7 +42,7 @@ export class UploadService {
     throw new Error(`ImgBB upload failed: ${result.error?.message || 'Unknown error'}`);
   }
 
-  private async uploadToImgur(file: File, clientId: string): Promise<string> {
+  private async uploadToImgur(file: File, clientId: string, signal?: AbortSignal): Promise<string> {
     const formData = new FormData();
     formData.append('image', file);
 
@@ -49,6 +52,8 @@ export class UploadService {
         'Authorization': `Client-ID ${clientId}`,
       },
       body: formData,
+      mode: 'cors',
+      signal
     });
 
     const result = await response.json();
@@ -58,7 +63,7 @@ export class UploadService {
     throw new Error(`Imgur upload failed: ${result.data?.error || 'Unknown error'}`);
   }
 
-  async uploadFile(file: File, hostName: string, config: Config): Promise<string> {
+  async uploadFile(file: File, hostName: string, config: Config, signal?: AbortSignal): Promise<string> {
     const { hosts } = config;
     
     switch (hostName) {
@@ -66,40 +71,45 @@ export class UploadService {
         if (!hosts.catbox.enabled || !hosts.catbox.userhash) {
           throw new Error('Catbox is not properly configured');
         }
-        return this.uploadToCatbox(file, hosts.catbox.userhash);
+        return this.uploadToCatbox(file, hosts.catbox.userhash, signal);
       
       case 'imgbb':
         if (!hosts.imgbb) {
           throw new Error('ImgBB API key not configured');
         }
-        return this.uploadToImgBB(file, hosts.imgbb);
+        return this.uploadToImgBB(file, hosts.imgbb, signal);
       
       case 'imgur':
         if (!hosts.imgur) {
           throw new Error('Imgur client ID not configured');
         }
-        return this.uploadToImgur(file, hosts.imgur);
+        return this.uploadToImgur(file, hosts.imgur, signal);
       
       default:
         throw new Error(`Unsupported host: ${hostName}`);
     }
   }
 
+  // Retry configuration
+  private readonly INITIAL_RETRY_DELAY = 1000; // 1 second
+  private readonly RETRY_MULTIPLIER = 2;
+
   async uploadWithRetry(
     file: File, 
     hostName: string, 
     config: Config, 
-    maxRetries: number = 3
+    maxRetries: number = 3,
+    signal?: AbortSignal
   ): Promise<string> {
     let lastError: Error;
     
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        return await this.uploadFile(file, hostName, config);
+        return await this.uploadFile(file, hostName, config, signal);
       } catch (error) {
         lastError = error as Error;
         if (attempt < maxRetries) {
-          const delay = Math.pow(2, attempt) * 1000;
+          const delay = Math.pow(this.RETRY_MULTIPLIER, attempt) * this.INITIAL_RETRY_DELAY;
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
@@ -112,7 +122,7 @@ export class UploadService {
     const { hosts } = config;
     const available: string[] = [];
     
-    // Catbox como prioridade
+    // Catbox como prioridade (padrão do sistema)
     if (hosts.catbox.enabled && hosts.catbox.userhash) {
       available.push('catbox');
     }
@@ -128,14 +138,27 @@ export class UploadService {
 
   async testConnectivity(config: Config): Promise<Record<string, boolean>> {
     const results: Record<string, boolean> = {};
-    const testFile = new File(['test'], 'test.txt', { type: 'text/plain' });
-    
     const hosts = this.getAvailableHosts(config);
     
     for (const host of hosts) {
       try {
-        await this.uploadFile(testFile, host, config);
-        results[host] = true;
+        // Test connectivity without uploading
+        switch (host) {
+          case 'catbox':
+            const catboxResponse = await fetch('https://catbox.moe', { method: 'HEAD' });
+            results[host] = catboxResponse.ok;
+            break;
+          case 'imgbb':
+            const imgbbResponse = await fetch('https://api.imgbb.com', { method: 'HEAD' });
+            results[host] = imgbbResponse.ok;
+            break;
+          case 'imgur':
+            const imgurResponse = await fetch('https://api.imgur.com', { method: 'HEAD' });
+            results[host] = imgurResponse.ok;
+            break;
+          default:
+            results[host] = false;
+        }
       } catch (error) {
         results[host] = false;
       }

@@ -38,8 +38,11 @@ export class CompressionService {
       return file;
     }
 
+    let imageUrl: string | null = null;
+    
     try {
       const img = await this.loadImage(file);
+      imageUrl = img.src;
       
       let { width, height } = img;
       const { maxWidth, maxHeight, quality } = config;
@@ -69,6 +72,10 @@ export class CompressionService {
         lastModified: file.lastModified,
       });
     } catch (error) {
+      // Clean up on error
+      if (imageUrl) {
+        URL.revokeObjectURL(imageUrl);
+      }
       console.warn('Image compression failed, using original:', error);
       return file;
     }
@@ -78,10 +85,17 @@ export class CompressionService {
     return Math.round((1 - compressed.size / original.size) * 100);
   }
 
+  private readonly QUALITY_THRESHOLDS = {
+    LARGE: { size: 5 * 1024 * 1024, quality: 60 },
+    MEDIUM: { size: 2 * 1024 * 1024, quality: 70 },
+    SMALL: { size: 1 * 1024 * 1024, quality: 80 },
+    TINY: { quality: 90 }
+  };
+
   getOptimalQuality(fileSize: number): number {
-    if (fileSize > 5 * 1024 * 1024) return 60;
-    if (fileSize > 2 * 1024 * 1024) return 70;
-    if (fileSize > 1 * 1024 * 1024) return 80;
-    return 90;
+    if (fileSize > this.QUALITY_THRESHOLDS.LARGE.size) return this.QUALITY_THRESHOLDS.LARGE.quality;
+    if (fileSize > this.QUALITY_THRESHOLDS.MEDIUM.size) return this.QUALITY_THRESHOLDS.MEDIUM.quality;
+    if (fileSize > this.QUALITY_THRESHOLDS.SMALL.size) return this.QUALITY_THRESHOLDS.SMALL.quality;
+    return this.QUALITY_THRESHOLDS.TINY.quality;
   }
 }
