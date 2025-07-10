@@ -7,21 +7,28 @@ export class UploadService {
     formData.append('userhash', userhash);
     formData.append('reqtype', 'fileupload');
 
-    const response = await fetch('https://catbox.moe/user/api.php', {
-      method: 'POST',
-      body: formData,
-      signal
-    });
+    try {
+      const response = await fetch('https://catbox.moe/user/api.php', {
+        method: 'POST',
+        body: formData,
+        signal
+      });
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
 
-    const result = await response.text();
-    if (result.startsWith('https://')) {
-      return result.trim();
+      const result = await response.text();
+      if (result.startsWith('https://')) {
+        return result.trim();
+      }
+      throw new Error(`Catbox upload failed: ${result}`);
+    } catch (error) {
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        throw new Error('❌ ERRO CORS: Catbox requer extensão CORS ou use ImgBB/Imgur sem extensões. Consulte CORS-SETUP.md');
+      }
+      throw error;
     }
-    throw new Error(`Catbox upload failed: ${result}`);
   }
 
   private async uploadToImgBB(file: File, apiKey: string, signal?: AbortSignal): Promise<string> {
@@ -136,17 +143,24 @@ export class UploadService {
     return available;
   }
 
-  async testConnectivity(config: Config): Promise<Record<string, boolean>> {
-    const results: Record<string, boolean> = {};
+  async testConnectivity(config: Config): Promise<Record<string, boolean | string>> {
+    const results: Record<string, boolean | string> = {};
     const hosts = this.getAvailableHosts(config);
     
     for (const host of hosts) {
       try {
-        // Test connectivity without uploading
         switch (host) {
           case 'catbox':
-            const catboxResponse = await fetch('https://catbox.moe', { method: 'HEAD' });
-            results[host] = catboxResponse.ok;
+            try {
+              const catboxResponse = await fetch('https://catbox.moe', { method: 'HEAD' });
+              results[host] = catboxResponse.ok;
+            } catch (error) {
+              if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+                results[host] = '❌ CORS bloqueado - Use ImgBB/Imgur';
+              } else {
+                results[host] = false;
+              }
+            }
             break;
           case 'imgbb':
             const imgbbResponse = await fetch('https://api.imgbb.com', { method: 'HEAD' });

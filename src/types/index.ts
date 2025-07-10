@@ -123,6 +123,7 @@ export interface UploadContextType {
   clearFiles: () => void;
   startUpload: (mangaData: MangaData, chapterData: ChapterData) => Promise<void>;
   retryUpload: (fileId: string) => Promise<string>;
+  cancelUpload: () => void;
 }
 
 export interface NotificationContextType {

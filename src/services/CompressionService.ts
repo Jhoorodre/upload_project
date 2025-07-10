@@ -11,9 +11,17 @@ export class CompressionService {
   private loadImage(file: File): Promise<HTMLImageElement> {
     return new Promise((resolve, reject) => {
       const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = URL.createObjectURL(file);
+      const objectUrl = URL.createObjectURL(file);
+      
+      img.onload = () => {
+        // Keep the URL in img.src for later cleanup
+        resolve(img);
+      };
+      img.onerror = (error) => {
+        URL.revokeObjectURL(objectUrl);
+        reject(error);
+      };
+      img.src = objectUrl;
     });
   }
 

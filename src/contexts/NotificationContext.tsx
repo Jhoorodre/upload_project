@@ -1,10 +1,9 @@
 import React, { createContext, useState, useCallback, ReactNode, useRef, useEffect } from 'react';
 import { AppNotification, NotificationContextType } from '../types';
-import { generateFileId } from '../utils/validation';
 
 // Generate unique ID for notifications
 const generateNotificationId = (): string => {
-  return `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `notif_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 };
 
 export const NotificationContext = createContext<NotificationContextType | undefined>(undefined);

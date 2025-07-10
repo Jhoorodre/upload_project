@@ -84,7 +84,7 @@ const BYTES_PER_UNIT = 1024;
 };
 
 export const generateFileId = (): string => {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2);
+  return Date.now().toString(36) + Math.random().toString(36).substring(2);
 };
 
 export const isImageFile = (file: File): boolean => {

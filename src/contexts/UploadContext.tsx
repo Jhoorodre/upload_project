@@ -15,7 +15,7 @@ export function UploadProvider({ children }: UploadProviderProps) {
   const [selectedFiles, setSelectedFiles] = useState<FilePreview[]>([]);
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
   const configContext = useContext(ConfigContext);
-  const { upload, isLoading, progress } = useUpload();
+  const { upload, isLoading, progress, cancel } = useUpload();
   const compressionService = useMemo(() => new CompressionService(), []);
   
   // Cleanup previews on unmount and when files change
@@ -133,7 +133,8 @@ export function UploadProvider({ children }: UploadProviderProps) {
     removeFile,
     clearFiles,
     startUpload,
-    retryUpload
+    retryUpload,
+    cancelUpload: cancel
   };
 
   return (

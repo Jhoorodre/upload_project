@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { UseUploadResult, FilePreview, MangaData, ChapterData, Config, UploadResult, UploadProgress } from '../types';
-import { UploadService, GitHubService, CompressionService } from '../services';
+import { UploadService, CompressionService } from '../services';
 
 export function useUpload(): UseUploadResult {
   const [isLoading, setIsLoading] = useState(false);
@@ -8,7 +8,6 @@ export function useUpload(): UseUploadResult {
   const abortControllerRef = useRef<AbortController | null>(null);
   
   const uploadService = useMemo(() => new UploadService(), []);
-  const githubService = useMemo(() => new GitHubService(), []);
   const compressionService = useMemo(() => new CompressionService(), []);
 
   const cancel = useCallback(() => {
@@ -127,7 +126,7 @@ export function useUpload(): UseUploadResult {
     
     setIsLoading(false);
     return result;
-  }, [uploadService, githubService, compressionService, updateProgress]);
+  }, [uploadService, compressionService, updateProgress]);
 
   return {
     upload,
