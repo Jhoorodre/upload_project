@@ -1,4 +1,5 @@
 import { Config } from '../types';
+import { ProxyService } from './ProxyService';
 
 export class UploadService {
   private async uploadToCatbox(file: File, userhash: string, signal?: AbortSignal): Promise<string> {
@@ -23,9 +24,9 @@ export class UploadService {
         return result.trim();
       }
       throw new Error(`Catbox upload failed: ${result}`);
-    } catch (error) {
-      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        throw new Error('❌ ERRO CORS: Catbox requer extensão CORS ou use ImgBB/Imgur sem extensões. Consulte CORS-SETUP.md');
+    } catch (error: any) {
+      if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+        throw new Error('⚠️ ERRO CORS: Catbox bloqueado! Use uma extensão CORS (CORS Unblock) ou configure ImgBB/Imgur como alternativa.');
       }
       throw error;
     }
